@@ -64,6 +64,23 @@ void atm_process_command(ATM *atm, char *command)
 	 * user's command to the bank, receives a message from the
 	 * bank, and then prints it to stdout.
 	 */
+    // Splitting input on space
+    char delimit[] = " \t\r\b\v\f\n";
+    char *token = strtok(command, delimit);
+
+    // Handling begin-session command
+    if (strcmp(command, "begin-session") == 0) {
+        token = strtok(NULL, delimit);
+        //printf("Running command begin-session with user: %s\n", token);
+        begin_session(token);
+    } else if (strcmp(command, "end-session") == 0 || 
+               strcmp(command, "withdraw") == 0 || 
+               strcmp(command, "balance") == 0) { 
+        printf("No user logged in\n");
+    } else {
+        printf("Invalid command\n");
+    }
+
 
 	/*
     char recvline[10000];
@@ -74,4 +91,97 @@ void atm_process_command(ATM *atm, char *command)
     recvline[n]=0;
     fputs(recvline,stdout);
 	*/
+}
+
+void begin_session(char* name) {
+    char usercard[251];
+    sprintf(usercard, "%s%s", name, ".card");
+    FILE *userfile = fopen(usercard, "r");
+    if (!userfile) {
+        printf("Unable to access %s's card\n", name);
+        return;
+    }
+
+    // printf("[*] Sucessfully found usercard: %s\n", usercard);
+
+    // Read in pin (assumed to be first line of user.card)
+    char * pin = NULL;
+    size_t len = 0;
+    ssize_t read;
+    char user_input[1001];
+
+    // Read pin from .card file
+    getline(&pin, &len, userfile);
+    int pincode = atoi(pin);
+    // printf("Read pin as: %d\n", pincode);
+    // Prompt user for pin and read user input 
+    // [*] For some reason, I needed to convert strings to ints to comp
+    printf("PIN? ");
+    fflush(stdout);
+    fgets(user_input, 1000 , stdin);
+    if (user_input == NULL) {
+        printf("Not authorized\n");
+        return;
+    }
+    int incode = atoi(user_input);
+    fflush(stdout);
+
+    // Authenticate pin and user
+    if (incode == pincode) {
+        // User is authenticated, prompt for further instructions
+        printf("Authorized\n");
+        printf("ATM (%s):  ", name);
+        fflush(stdout);
+        while (fgets(user_input, 1000 ,stdin) != NULL) {
+            char delimit[] = " \t\r\b\v\f\n";
+            char *token = strtok(user_input, delimit);
+            if (token == NULL) {
+                printf("ATM (%s):  ", name);
+                fflush(stdout);
+                continue;
+            }
+            // balance command
+            if (strcmp(token, "balance") == 0) {
+                token = strtok(NULL, delimit);
+                if (token != NULL) {
+                    printf("Usage: balance\n");
+                    printf("ATM (%s):  ", name);
+                    fflush(stdout);
+                    continue;
+                }
+                printf("[*] Running authenticated command balance\n");
+                balance(name);
+            } else if (strcmp(token, "withdraw") == 0) { // withdraw command
+                token = strtok(NULL, delimit);
+                printf("[*] Running authenticated command withdraw\n");
+                withdraw(name, token);
+            } else if (strcmp(token, "end-session") == 0) { // end-session command
+                printf("User logged out\n");
+                return;
+            } else if (strcmp(token, "begin-session") == 0) {
+                printf("A user is already logged in\n");
+            } else {
+                printf("Invalid command\n");
+            }
+
+            printf("ATM (%s):  ", name);
+            fflush(stdout);
+        }
+
+
+    } else {
+        printf("Not authorized\n");
+    }
+
+    /* while ((read = getline(&line, &len, userfile)) != -1) {
+        printf("%s", line);
+    } */
+}
+
+void balance (char* user) {
+
+}
+
+void withdraw (char* user, char* amt) {
+
 }

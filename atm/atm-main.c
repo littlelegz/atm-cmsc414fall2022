@@ -25,7 +25,7 @@ int main(int argc, char**argv)
     printf("%s", prompt);
     fflush(stdout);
 
-    while (fgets(user_input, 10000,stdin) != NULL)
+    while (fgets(user_input, 1000 ,stdin) != NULL)
     {
         atm_process_command(atm, user_input);
         printf("%s", prompt);
