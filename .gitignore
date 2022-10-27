@@ -1,2 +1,4 @@
 *~
 bin/
+*.c.swp
+*.h.swp
