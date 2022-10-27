@@ -78,7 +78,7 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
         char *pin = strtok(NULL, delimit);
         char *balance = strtok(NULL, delimit);
         char *last = strtok(NULL, delimit);
-	if (last) {
+	if (strlen(username) > 250 || last) {
 	    printf("Usage:  create-user <user-name> <pin> <balance>\n");
 	    return;
 	}
@@ -111,8 +111,8 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
 	newUser.balance = atoi(balance);
 	hash_table_add(bank->users, username, &newUser);
 
-	char *filename = malloc((sizeof username) + 5);
-	strncpy(filename, username, (sizeof username));
+	char filename[256];
+	strncpy(filename, username, strlen(username) + 1);
 	strcat(filename, ".card");
 
 	FILE *fp = fopen(filename, "w+");
