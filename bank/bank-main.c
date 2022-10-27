@@ -15,6 +15,12 @@ static const char prompt[] = "BANK: ";
 
 int main(int argc, char**argv)
 {
+   FILE *bankfile = fopen(argv[1], "r");
+   if (!bankfile) {
+        printf("Error opening bank initialization file\n");
+	exit(64);
+   }
+   
    int n;
    char sendline[1000];
    char recvline[1000];
