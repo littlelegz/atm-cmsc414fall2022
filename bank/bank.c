@@ -3,6 +3,12 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include "../util/hash_table.h"
+
+typedef struct User {
+    char pin[5];
+    int balance;
+} User;
 
 Bank* bank_create()
 {
@@ -16,7 +22,7 @@ Bank* bank_create()
     // Set up the network state
     bank->sockfd=socket(AF_INET,SOCK_DGRAM,0);
 
-    bzero(&bank->rtr_addr,sizeof(bank->rtr_addr));
+    bzero(&bank->rtr_addr, sizeof(bank->rtr_addr));
     bank->rtr_addr.sin_family = AF_INET;
     bank->rtr_addr.sin_addr.s_addr=inet_addr("127.0.0.1");
     bank->rtr_addr.sin_port=htons(ROUTER_PORT);
@@ -28,7 +34,13 @@ Bank* bank_create()
     bind(bank->sockfd,(struct sockaddr *)&bank->bank_addr,sizeof(bank->bank_addr));
 
     // Set up the protocol state
-    // TODO set up more, as needed
+    bank->users = hash_table_create(10);
+    /*(User a;
+    strcpy(a.pin, "1234");
+    a.balance = 10000000;
+    hash_table_add(bank->users, "jerry", &a);
+    User *b = hash_table_find(bank->users, "jerry");
+    printf("Jerry -> %s\n", (*b).pin);*/
 
     return bank;
 }
