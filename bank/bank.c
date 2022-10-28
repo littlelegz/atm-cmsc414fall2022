@@ -88,6 +88,7 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
 {
     // TODO: Implement the bank's local commands
     char *string = strdup(command);
+    char *tofree = string;
     char *token = strsep(&string, " ");
     if (strcmp(token, "create-user") == 0) {
         char *username = strsep(&string, " ");
@@ -208,6 +209,10 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
 	user->balance = user->balance + atoi(amt);
 
 	printf("$%s added to %s's account\n", amt, username);
+    }
+
+    if (tofree != NULL) {
+        free(tofree);
     }
 }
 
