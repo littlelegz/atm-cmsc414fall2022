@@ -101,8 +101,13 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
 	    return;
 	}
 
-	if (hash_table_find(bank->users, username) != NULL) {
+    User *u = hash_table_find(bank->users, username);
+
+	if (u != NULL) {
 	    printf("Error:  user %s already exists\n", username);
+        printf("username: %s\n", username);
+        printf("pin: %s\n", u->pin);
+        printf("balance: %d\n", u->balance);
 	    return;
 	}
 
@@ -126,6 +131,30 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
 	fclose(fp);
 
 	printf("Created user %s\n", username);
+    } else if (strcmp(token, "balance") == 0) {
+        char *username = strsep(&string, " ");
+        char *last = strsep(&string, " \n");
+        if (strlen(username) > 250 || last) {
+	        printf("Usage:  balance <user-name>\n");
+	        return;
+	    }
+
+        regex_t usernameRegex;
+	    regcomp(&usernameRegex, "[a-zA-Z]+", REG_EXTENDED);
+
+        if (regexec(&usernameRegex, username, 0, NULL, 0)) {
+            printf("Usage:  balance <user-name>\n");
+        }
+
+        if (hash_table_find(bank->users, username) != NULL) {
+            printf("$");
+            User *u = hash_table_find(bank->users, username);
+            printf("%d\n", (*u).balance);
+	    } else {
+            printf("No such user\n");
+	        return;
+        }
+
     }
 }
 
