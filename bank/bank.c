@@ -4,7 +4,23 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <limits.h>
 #include "../util/hash_table.h"
+
+// TODO: relocate to utils
+int is_safe_to_add(int a, int b) {
+    if (a >= 0) {
+        if (b > (INT_MAX - a)) {
+	    return 0;
+        }
+    } else {
+        if (b < (INT_MIN - a)) {
+	    return 0;
+        }
+    }
+
+    return 1;
+}
 
 typedef struct _User {
     char pin[5];
@@ -71,26 +87,27 @@ ssize_t bank_recv(Bank *bank, char *data, size_t max_data_len)
 void bank_process_local_command(Bank *bank, char *command, size_t len)
 {
     // TODO: Implement the bank's local commands
-    char delimit[] = " \t\r\n\v\f";
-    char *token = strtok(command, delimit);
+    char *string = strdup(command);
+    char *token = strsep(&string, " ");
     if (strcmp(token, "create-user") == 0) {
-        char *username = strtok(NULL, delimit);
-        char *pin = strtok(NULL, delimit);
-        char *balance = strtok(NULL, delimit);
-        char *last = strtok(NULL, delimit);
-	if (strlen(username) > 250 || last) {
+        char *username = strsep(&string, " ");
+        char *pin = strsep(&string, " ");
+        char *balance = strsep(&string, " \n");
+
+	long longBalance = strtoll(balance, NULL, 0);
+	if (strlen(username) > 250 || longBalance > INT_MAX) {
 	    printf("Usage:  create-user <user-name> <pin> <balance>\n");
 	    return;
 	}
 
 	regex_t usernameRegex;
-	regcomp(&usernameRegex, "[a-zA-Z]+", REG_EXTENDED);
+	regcomp(&usernameRegex, "^[a-zA-Z]+$", REG_EXTENDED);
 
 	regex_t pinRegex;
-	regcomp(&pinRegex, "[0-9][0-9][0-9][0-9]", REG_EXTENDED);
+	regcomp(&pinRegex, "^[0-9][0-9][0-9][0-9]$", REG_EXTENDED);
 
 	regex_t balanceRegex;
-	regcomp(&balanceRegex, "[0-9]+", REG_EXTENDED);
+	regcomp(&balanceRegex, "^[0-9]+$", REG_EXTENDED);
 
 	if (
 	    regexec(&usernameRegex, username, 0, NULL, 0) ||
@@ -101,20 +118,16 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
 	    return;
 	}
 
-    User *u = hash_table_find(bank->users, username);
-
-	if (u != NULL) {
+	if (hash_table_find(bank->users, username) != NULL) {	
 	    printf("Error:  user %s already exists\n", username);
-        printf("username: %s\n", username);
-        printf("pin: %s\n", u->pin);
-        printf("balance: %d\n", u->balance);
-	    return;
+	   return;
 	}
 
-	User newUser;
-	strcpy(newUser.pin, pin);
-	newUser.balance = atoi(balance);
-	hash_table_add(bank->users, username, &newUser);
+	User *newUser = (User*) malloc(sizeof(User));
+	strcpy(newUser->pin, pin);
+	newUser->balance = atoi(balance);
+
+	hash_table_add(bank->users, username, newUser);
 
 	char filename[256];
 	strncpy(filename, username, strlen(username) + 1);
@@ -127,20 +140,20 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
 	    return;
 	}
 
-	fprintf(fp, "%s\n%s\n", pin, balance);
+	fprintf(fp, "%s\n", pin);
 	fclose(fp);
 
 	printf("Created user %s\n", username);
     } else if (strcmp(token, "balance") == 0) {
-        char *username = strsep(&string, " ");
-        char *last = strsep(&string, " \n");
-        if (strlen(username) > 250 || last) {
-	        printf("Usage:  balance <user-name>\n");
-	        return;
-	    }
+        char *username = strsep(&string, " \n");
+
+        if (strlen(username) > 250) {
+	    printf("Usage:  balance <user-name>\n");
+	    return;
+	}
 
         regex_t usernameRegex;
-	    regcomp(&usernameRegex, "[a-zA-Z]+", REG_EXTENDED);
+        regcomp(&usernameRegex, "^[a-zA-Z]+$", REG_EXTENDED);
 
         if (regexec(&usernameRegex, username, 0, NULL, 0)) {
             printf("Usage:  balance <user-name>\n");
@@ -150,11 +163,51 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
             printf("$");
             User *u = hash_table_find(bank->users, username);
             printf("%d\n", (*u).balance);
-	    } else {
+        } else {
             printf("No such user\n");
-	        return;
+	    return;
         }
+    } else if (strcmp(token, "deposit") == 0) {
+        char *username = strsep(&string, " ");
+        char *amt = strsep(&string, " \n");
 
+	if (strlen(username) > 250) {
+	    printf("Usage:  deposit <user-name> <amt>\n");
+	    return;
+	}
+
+	regex_t usernameRegex;
+	regcomp(&usernameRegex, "[a-zA-Z]+", REG_EXTENDED);
+
+	regex_t amtRegex;
+	regcomp(&amtRegex, "[0-9]+", REG_EXTENDED);
+
+	if (
+	    regexec(&usernameRegex, username, 0, NULL, 0) ||
+	    regexec(&amtRegex, amt, 0, NULL, 0)
+	) {
+	    printf("Usage:  deposit <user-name> <amt>\n");
+	    return;
+	}
+
+        User *user = hash_table_find(bank->users, username);
+	if (user == NULL) {
+	    printf("No such user\n");
+	    return;
+	}
+
+	long longAmt = strtoll(amt, NULL, 0);
+	if (
+	    longAmt > INT_MAX ||
+	    !is_safe_to_add(user->balance, atoi(amt))
+	) {
+	    printf("Too rich for this program\n");
+	    return;
+	}
+
+	user->balance = user->balance + atoi(amt);
+
+	printf("$%s added to %s's account\n", amt, username);
     }
 }
 
