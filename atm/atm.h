@@ -32,8 +32,8 @@ void atm_free(ATM *atm);
 ssize_t atm_send(ATM *atm, char *data, size_t data_len);
 ssize_t atm_recv(ATM *atm, char *data, size_t max_data_len);
 void atm_process_command(ATM *atm, char *command);
-void begin_session(char* name);
-void balance(char *user);
-void withdraw(char *user, char *amt);
+void begin_session(ATM *atm, char* name);
+void balance(ATM *atm, char *user);
+void withdraw(ATM *atm, char *user, char *amt);
 
 #endif

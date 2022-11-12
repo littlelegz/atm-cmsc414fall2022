@@ -70,9 +70,15 @@ void atm_process_command(ATM *atm, char *command)
 
     // Handling begin-session command
     if (strcmp(command, "begin-session") == 0) {
+        char* name = strtok(NULL, delimit);
         token = strtok(NULL, delimit);
-        //printf("Running command begin-session with user: %s\n", token);
-        begin_session(token);
+        if (token != NULL || name == NULL) {
+            printf("Usage:  begin-session <user-name>\n");
+            fflush(stdout);
+        } else {
+            //printf("Running command begin-session with user: %s\n", token);
+            begin_session(atm, name);
+        }
     } else if (strcmp(command, "end-session") == 0 || 
                strcmp(command, "withdraw") == 0 || 
                strcmp(command, "balance") == 0) { 
@@ -93,7 +99,7 @@ void atm_process_command(ATM *atm, char *command)
 	*/
 }
 
-void begin_session(char* name) {
+void begin_session(ATM *atm, char* name) {
     char usercard[251];
     sprintf(usercard, "%s%s", name, ".card");
     FILE *userfile = fopen(usercard, "r");
@@ -150,11 +156,18 @@ void begin_session(char* name) {
                     continue;
                 }
                 printf("[*] Running authenticated command balance\n");
-                balance(name);
+                balance(atm, name);
             } else if (strcmp(token, "withdraw") == 0) { // withdraw command
+                char* amt = strtok(NULL, delimit);
                 token = strtok(NULL, delimit);
+                if (token != NULL || amt == NULL) {
+                    printf("Usage: withdraw <amt>\n");
+                    printf("ATM (%s):  ", name);
+                    fflush(stdout);
+                    continue;
+                }
                 printf("[*] Running authenticated command withdraw\n");
-                withdraw(name, token);
+                withdraw(atm, name, amt);
             } else if (strcmp(token, "end-session") == 0) { // end-session command
                 printf("User logged out\n");
                 return;
@@ -178,10 +191,28 @@ void begin_session(char* name) {
     } */
 }
 
-void balance (char* user) {
+void balance (ATM *atm, char* user) {
+    char recvline[10000];
+    int n;
+    char command[400] = "BAL,";
+    strcat(command, user);
 
+    // Sending balance command
+    atm_send(atm, command, strlen(command));
+    n = atm_recv(atm,recvline,10000);
+    recvline[n]=0;
+    fputs(recvline,stdout);
 }
 
-void withdraw (char* user, char* amt) {
+void withdraw (ATM *atm, char* user, char* amt) {
+    char recvline[10000];
+    int n;
+    char command[400]; 
+    sprintf(command, "WDR,%s,%s", user, amt);
 
+    // Sending withdraw command
+    atm_send(atm, command, strlen(command));
+    n = atm_recv(atm,recvline,10000);
+    recvline[n]=0;
+    fputs(recvline,stdout);
 }
