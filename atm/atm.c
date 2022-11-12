@@ -102,9 +102,18 @@ void atm_process_command(ATM *atm, char *command)
 void begin_session(ATM *atm, char* name) {
     char usercard[251];
     sprintf(usercard, "%s%s", name, ".card");
-    FILE *userfile = fopen(usercard, "r");
-    if (!userfile) {
-        printf("Unable to access %s's card\n", name);
+    FILE *userfile;
+    // Checking if file exists
+    if (access(usercard, F_OK) == 0) {
+    // file exists
+        userfile = fopen(usercard, "r");
+        if (!userfile) {
+            printf("Unable to access %s's card\n", name);
+        return;
+    }
+    } else {
+    // file doesn't exist
+        printf("No such user\n");
         return;
     }
 
