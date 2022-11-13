@@ -8,47 +8,54 @@
 #include "../util/hash_table.h"
 
 // TODO: relocate to utils
-int is_safe_to_add(int a, int b) {
-    if (a >= 0) {
-        if (b > (INT_MAX - a)) {
-	    return 0;
+int is_safe_to_add(int a, int b)
+{
+    if (a >= 0)
+    {
+        if (b > (INT_MAX - a))
+        {
+            return 0;
         }
-    } else {
-        if (b < (INT_MIN - a)) {
-	    return 0;
+    }
+    else
+    {
+        if (b < (INT_MIN - a))
+        {
+            return 0;
         }
     }
 
     return 1;
 }
 
-typedef struct _User {
+typedef struct _User
+{
     char pin[5];
     int balance;
 } User;
 
-Bank* bank_create()
+Bank *bank_create()
 {
-    Bank *bank = (Bank*) malloc(sizeof(Bank));
-    if(bank == NULL)
+    Bank *bank = (Bank *)malloc(sizeof(Bank));
+    if (bank == NULL)
     {
         perror("Could not allocate Bank");
         exit(1);
     }
 
     // Set up the network state
-    bank->sockfd=socket(AF_INET,SOCK_DGRAM,0);
+    bank->sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 
     bzero(&bank->rtr_addr, sizeof(bank->rtr_addr));
     bank->rtr_addr.sin_family = AF_INET;
-    bank->rtr_addr.sin_addr.s_addr=inet_addr("127.0.0.1");
-    bank->rtr_addr.sin_port=htons(ROUTER_PORT);
+    bank->rtr_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    bank->rtr_addr.sin_port = htons(ROUTER_PORT);
 
     bzero(&bank->bank_addr, sizeof(bank->bank_addr));
     bank->bank_addr.sin_family = AF_INET;
-    bank->bank_addr.sin_addr.s_addr=inet_addr("127.0.0.1");
+    bank->bank_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     bank->bank_addr.sin_port = htons(BANK_PORT);
-    bind(bank->sockfd,(struct sockaddr *)&bank->bank_addr,sizeof(bank->bank_addr));
+    bind(bank->sockfd, (struct sockaddr *)&bank->bank_addr, sizeof(bank->bank_addr));
 
     // Set up the protocol state
     bank->users = hash_table_create(10);
@@ -64,7 +71,7 @@ Bank* bank_create()
 
 void bank_free(Bank *bank)
 {
-    if(bank != NULL)
+    if (bank != NULL)
     {
         close(bank->sockfd);
         free(bank);
@@ -75,7 +82,7 @@ ssize_t bank_send(Bank *bank, char *data, size_t data_len)
 {
     // Returns the number of bytes sent; negative on error
     return sendto(bank->sockfd, data, data_len, 0,
-                  (struct sockaddr*) &bank->rtr_addr, sizeof(bank->rtr_addr));
+                  (struct sockaddr *)&bank->rtr_addr, sizeof(bank->rtr_addr));
 }
 
 ssize_t bank_recv(Bank *bank, char *data, size_t max_data_len)
@@ -90,128 +97,144 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
     char *string = strdup(command);
     char *tofree = string;
     char *token = strsep(&string, " ");
-    if (strcmp(token, "create-user") == 0) {
+    if (strcmp(token, "create-user") == 0)
+    {
         char *username = strsep(&string, " ");
         char *pin = strsep(&string, " ");
         char *balance = strsep(&string, " \n");
 
-	long longBalance = strtoll(balance, NULL, 0);
-	if (strlen(username) > 250 || longBalance > INT_MAX) {
-	    printf("Usage:  create-user <user-name> <pin> <balance>\n");
-	    return;
-	}
-
-	regex_t usernameRegex;
-	regcomp(&usernameRegex, "^[a-zA-Z]+$", REG_EXTENDED);
-
-	regex_t pinRegex;
-	regcomp(&pinRegex, "^[0-9][0-9][0-9][0-9]$", REG_EXTENDED);
-
-	regex_t balanceRegex;
-	regcomp(&balanceRegex, "^[0-9]+$", REG_EXTENDED);
-
-	if (
-	    regexec(&usernameRegex, username, 0, NULL, 0) ||
-	    regexec(&pinRegex, pin, 0, NULL, 0) ||
-	    regexec(&balanceRegex, balance, 0, NULL, 0)
-	) {
-	    printf("Usage:  create-user <user-name> <pin> <balance>\n");
-	    return;
-	}
-
-	if (hash_table_find(bank->users, username) != NULL) {	
-	    printf("Error:  user %s already exists\n", username);
-	   return;
-	}
-
-	User *newUser = (User*) malloc(sizeof(User));
-	strcpy(newUser->pin, pin);
-	newUser->balance = atoi(balance);
-
-	hash_table_add(bank->users, username, newUser);
-
-	char filename[256];
-	strncpy(filename, username, strlen(username) + 1);
-	strcat(filename, ".card");
-
-	FILE *fp = fopen(filename, "w+");
-	if (!fp) {
-	    printf("Error creating card file for user %s\n", username);
-	    hash_table_del(bank->users, username);
-	    return;
-	}
-
-	fprintf(fp, "%s\n", pin);
-	fclose(fp);
-
-	printf("Created user %s\n", username);
-    } else if (strcmp(token, "balance") == 0) {
-        char *username = strsep(&string, " \n");
-
-        if (strlen(username) > 250) {
-	    printf("Usage:  balance <user-name>\n");
-	    return;
-	}
+        long longBalance = strtoll(balance, NULL, 0);
+        if (strlen(username) > 250 || longBalance > INT_MAX)
+        {
+            printf("Usage:  create-user <user-name> <pin> <balance>\n");
+            return;
+        }
 
         regex_t usernameRegex;
         regcomp(&usernameRegex, "^[a-zA-Z]+$", REG_EXTENDED);
 
-        if (regexec(&usernameRegex, username, 0, NULL, 0)) {
+        regex_t pinRegex;
+        regcomp(&pinRegex, "^[0-9][0-9][0-9][0-9]$", REG_EXTENDED);
+
+        regex_t balanceRegex;
+        regcomp(&balanceRegex, "^[0-9]+$", REG_EXTENDED);
+
+        if (
+            regexec(&usernameRegex, username, 0, NULL, 0) ||
+            regexec(&pinRegex, pin, 0, NULL, 0) ||
+            regexec(&balanceRegex, balance, 0, NULL, 0))
+        {
+            printf("Usage:  create-user <user-name> <pin> <balance>\n");
+            return;
+        }
+
+        if (hash_table_find(bank->users, username) != NULL)
+        {
+            printf("Error:  user %s already exists\n", username);
+            return;
+        }
+
+        User *newUser = (User *)malloc(sizeof(User));
+        strcpy(newUser->pin, pin);
+        newUser->balance = atoi(balance);
+
+        hash_table_add(bank->users, username, newUser);
+
+        char filename[256];
+        strncpy(filename, username, strlen(username) + 1);
+        strcat(filename, ".card");
+
+        FILE *fp = fopen(filename, "w+");
+        if (!fp)
+        {
+            printf("Error creating card file for user %s\n", username);
+            hash_table_del(bank->users, username);
+            return;
+        }
+
+        fprintf(fp, "%s\n", pin);
+        fclose(fp);
+
+        printf("Created user %s\n", username);
+    }
+    else if (strcmp(token, "balance") == 0)
+    {
+        char *username = strsep(&string, " \n");
+
+        if (strlen(username) > 250)
+        {
+            printf("Usage:  balance <user-name>\n");
+            return;
+        }
+
+        regex_t usernameRegex;
+        regcomp(&usernameRegex, "^[a-zA-Z]+$", REG_EXTENDED);
+
+        if (regexec(&usernameRegex, username, 0, NULL, 0))
+        {
             printf("Usage:  balance <user-name>\n");
         }
 
-        if (hash_table_find(bank->users, username) != NULL) {
+        if (hash_table_find(bank->users, username) != NULL)
+        {
             printf("$");
             User *u = hash_table_find(bank->users, username);
             printf("%d\n", (*u).balance);
-        } else {
-            printf("No such user\n");
-	    return;
         }
-    } else if (strcmp(token, "deposit") == 0) {
+        else
+        {
+            printf("No such user\n");
+            return;
+        }
+    }
+    else if (strcmp(token, "deposit") == 0)
+    {
         char *username = strsep(&string, " ");
         char *amt = strsep(&string, " \n");
 
-	if (strlen(username) > 250) {
-	    printf("Usage:  deposit <user-name> <amt>\n");
-	    return;
-	}
+        if (strlen(username) > 250)
+        {
+            printf("Usage:  deposit <user-name> <amt>\n");
+            return;
+        }
 
-	regex_t usernameRegex;
-	regcomp(&usernameRegex, "[a-zA-Z]+", REG_EXTENDED);
+        regex_t usernameRegex;
+        regcomp(&usernameRegex, "[a-zA-Z]+", REG_EXTENDED);
 
-	regex_t amtRegex;
-	regcomp(&amtRegex, "[0-9]+", REG_EXTENDED);
+        regex_t amtRegex;
+        regcomp(&amtRegex, "[0-9]+", REG_EXTENDED);
 
-	if (
-	    regexec(&usernameRegex, username, 0, NULL, 0) ||
-	    regexec(&amtRegex, amt, 0, NULL, 0)
-	) {
-	    printf("Usage:  deposit <user-name> <amt>\n");
-	    return;
-	}
+        if (
+            regexec(&usernameRegex, username, 0, NULL, 0) ||
+            regexec(&amtRegex, amt, 0, NULL, 0))
+        {
+            printf("Usage:  deposit <user-name> <amt>\n");
+            return;
+        }
 
         User *user = hash_table_find(bank->users, username);
-	if (user == NULL) {
-	    printf("No such user\n");
-	    return;
-	}
+        if (user == NULL)
+        {
+            printf("No such user\n");
+            return;
+        }
 
-	long longAmt = strtoll(amt, NULL, 0);
-	if (
-	    longAmt > INT_MAX ||
-	    !is_safe_to_add(user->balance, atoi(amt))
-	) {
-	    printf("Too rich for this program\n");
-	    return;
-	}
+        long longAmt = strtoll(amt, NULL, 0);
+        if (
+            longAmt > INT_MAX ||
+            !is_safe_to_add(user->balance, atoi(amt)))
+        {
+            printf("Too rich for this program\n");
+            return;
+        }
 
-	user->balance = user->balance + atoi(amt);
+        user->balance = user->balance + atoi(amt);
 
-	printf("$%s added to %s's account\n", amt, username);
+        printf("$%s added to %s's account\n", amt, username);
     }
 
-    if (tofree != NULL) {
+    if (tofree != NULL)
+    {
         free(tofree);
     }
 }
@@ -220,18 +243,17 @@ void bank_process_remote_command(Bank *bank, char *command, size_t len)
 {
     // TODO: Implement the bank side of the ATM-bank protocol
 
-	/*
-	 * The following is a toy example that simply receives a
-	 * string from the ATM, prepends "Bank got: " and echoes 
-	 * it back to the ATM before printing it to stdout.
-	 */
+    /*
+     * The following is a toy example that simply receives a
+     * string from the ATM, prepends "Bank got: " and echoes
+     * it back to the ATM before printing it to stdout.
+     */
 
-	/*
     char sendline[1000];
-    command[len]=0;
-    sprintf(sendline, "Bank got: %s", command);
+    command[len] = 0;
+    sprintf(sendline, "Bank got: %s\n", command);
     bank_send(bank, sendline, strlen(sendline));
     printf("Received the following:\n");
     fputs(command, stdout);
-	*/
+    fflush(stdout);
 }
