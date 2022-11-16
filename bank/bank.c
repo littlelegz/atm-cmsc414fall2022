@@ -158,6 +158,10 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
         printf("Created user %s\n", username);
     }
     else if (strcmp(token, "balance") == 0)
+    /* Bug: create a user, try to check balance. No user found,
+    try to create same user, get error msg. Then check balance,
+    successfully returns balance
+    */
     {
         char *username = strsep(&string, " \n");
 
