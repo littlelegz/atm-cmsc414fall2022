@@ -96,12 +96,23 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
     // TODO: Implement the bank's local commands
     char *string = strdup(command);
     char *tofree = string;
-    char *token = strsep(&string, " ");
+    char *token = strsep(&string, " \n");
     if (strcmp(token, "create-user") == 0)
     {
         char *username = strsep(&string, " ");
         char *pin = strsep(&string, " ");
         char *balance = strsep(&string, " \n");
+        char *extra = strsep(&string, " \n");
+
+	if (
+	    username == NULL ||
+	    pin == NULL ||
+	    balance == NULL ||
+	    (extra != NULL && strcmp(extra, "") != 0)
+	) {
+            printf("Usage:  create-user <user-name> <pin> <balance>\n");
+            return;
+	}
 
         long longBalance = strtoll(balance, NULL, 0);
         if (strlen(username) > 250 || longBalance > INT_MAX)
@@ -164,9 +175,13 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
     */
     {
         char *username = strsep(&string, " \n");
+        char *extra = strsep(&string, " \n");
 
-        if (strlen(username) > 250)
-        {
+        if (
+	    username == NULL ||
+	    strlen(username) > 250 ||
+	    (extra != NULL && strcmp(extra, "") != 0)
+	) {
             printf("Usage:  balance <user-name>\n");
             return;
         }
@@ -177,6 +192,7 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
         if (regexec(&usernameRegex, username, 0, NULL, 0))
         {
             printf("Usage:  balance <user-name>\n");
+	    return;
         }
 
         if (hash_table_find(bank->users, username) != NULL)
@@ -195,9 +211,14 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
     {
         char *username = strsep(&string, " ");
         char *amt = strsep(&string, " \n");
+        char *extra = strsep(&string, " \n");
 
-        if (strlen(username) > 250)
-        {
+        if (
+	    username == NULL ||
+	    amt == NULL ||
+	    strlen(username) > 250 ||
+	    (extra != NULL && strcmp(extra, "") != 0)
+	) {
             printf("Usage:  deposit <user-name> <amt>\n");
             return;
         }
