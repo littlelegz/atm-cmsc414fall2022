@@ -85,17 +85,11 @@ ssize_t bank_recv(Bank *bank, char *data, size_t max_data_len)
     return recvfrom(bank->sockfd, data, max_data_len, 0, NULL, NULL);
 }
 
-void bank_process_local_command(Bank *bank, char *command, size_t len)
-{
-    char *string = strdup(command);
-    /*char *tofree = string;*/
-    char *token = strsep(&string, " \n");
-    if (strcmp(token, "create-user") == 0)
-    {
-        char *username = strsep(&string, " ");
-        char *pin = strsep(&string, " ");
-        char *balance = strsep(&string, " \n");
-        char *extra = strsep(&string, " \n");
+void bank_process_create_user(Bank *bank, char *args) {
+        char *username = strsep(&args, " ");
+        char *pin = strsep(&args, " ");
+        char *balance = strsep(&args, " \n");
+        char *extra = strsep(&args, " \n");
 
 	if (
 	    username == NULL ||
@@ -156,19 +150,19 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
         fclose(fp);
 
         printf("Created user %s\n", username);
-    }
-    else if (strcmp(token, "balance") == 0)
-    {
-        char *username = strsep(&string, " \n");
-        char *extra = strsep(&string, " \n");
+}
+
+char *bank_process_balance(Bank *bank, char* args)
+{
+        char *username = strsep(&args, " \n");
+        char *extra = strsep(&args, " \n");
 
         if (
 	    username == NULL ||
 	    strlen(username) > 250 ||
 	    (extra != NULL && strcmp(extra, "") != 0)
 	) {
-            printf("Usage:  balance <user-name>\n");
-            return;
+            return "Usage:  balance <user-name>";
         }
 
         regex_t usernameRegex;
@@ -176,26 +170,27 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
 
         if (regexec(&usernameRegex, username, 0, NULL, 0))
         {
-            printf("Usage:  balance <user-name>\n");
-	    return;
+            return "Usage:  balance <user-name>";
         }
 
 	char *balance = hash_table_find(bank->users, username);
         if (balance != NULL)
         {
-            printf("$%s\n", balance);
+	    char *ret = malloc(sizeof(char) * 13);
+	    snprintf(ret, 13, "$%s", balance);
+	    return ret;
         }
         else
         {
-            printf("No such user\n");
-            return;
+            return "No such user";
         }
-    }
-    else if (strcmp(token, "deposit") == 0)
-    {
-        char *username = strsep(&string, " ");
-        char *amt = strsep(&string, " \n");
-        char *extra = strsep(&string, " \n");
+}
+
+void bank_process_deposit(Bank *bank, char *args)
+{
+        char *username = strsep(&args, " ");
+        char *amt = strsep(&args, " \n");
+        char *extra = strsep(&args, " \n");
 
         if (
 	    username == NULL ||
@@ -245,6 +240,25 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
         hash_table_add(bank->users, username, newBalanceStr);
 
         printf("$%s added to %s's account\n", amt, username);
+}
+
+void bank_process_local_command(Bank *bank, char *command, size_t len)
+{
+    char *args = strdup(command);
+    /*char *tofree = args;*/
+    char *token = strsep(&args, " \n");
+    if (strcmp(token, "create-user") == 0)
+    {
+        bank_process_create_user(bank, args);
+    }
+    else if (strcmp(token, "balance") == 0)
+    {
+	char* balance = bank_process_balance(bank, args);
+	printf("%s\n\n", balance);
+    }
+    else if (strcmp(token, "deposit") == 0)
+    {
+	bank_process_deposit(bank, args);
     } else {
         printf("Invalid command\n");
     }
@@ -255,13 +269,9 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
     }*/
 }
 
-void bank_withdraw(Bank *bank, char *command, size_t len) {
-    char *string = strdup(command);
-    char *token = strsep(&string, " \n");
-
+void bank_process_withdraw(Bank *bank, char *string) {
     char *username = strsep(&string, " ");
     char *amt = strsep(&string, " \n");
-    char *extra = strsep(&string, " \n");
 
     char *balance = hash_table_find(bank->users, username);
     if (balance == NULL)
@@ -283,7 +293,7 @@ void bank_withdraw(Bank *bank, char *command, size_t len) {
     hash_table_del(bank->users, username);
     hash_table_add(bank->users, username, newBalanceStr);
 
-    char response[400];
+    char response[27];
     sprintf(response, "$%s dispensed\n\n", amt);
     bank_send(bank, response, strlen(response));
 }
@@ -311,6 +321,9 @@ void bank_process_remote_command(Bank *bank, char *command, size_t len)
     char *token = strsep(&string, " \n");
 
     if (strcmp(token, "withdraw") == 0) {
-        bank_withdraw(bank, command, len);
+        bank_process_withdraw(bank, string);
+    } else if (strcmp(token, "balance") == 0) {
+	char *ret = bank_process_balance(bank, string);
+	bank_send(bank, ret, strlen(ret));
     }
 }
