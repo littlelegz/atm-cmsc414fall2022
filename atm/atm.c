@@ -239,8 +239,8 @@ void balance(ATM *atm, char *user)
 {
     char recvline[10000];
     int n;
-    char command[400] = "BAL,";
-    strcat(command, user);
+    char command[400];
+    sprintf(command, "balance %s\n", user);
 
     // Sending balance command
     atm_send(atm, command, strlen(command));
@@ -254,7 +254,7 @@ void withdraw(ATM *atm, char *user, char *amt)
     char recvline[10000];
     int n;
     char command[400];
-    sprintf(command, "WDR,%s,%s", user, amt);
+    sprintf(command, "withdraw %s %s", user, amt);
 
     // Sending withdraw command
     atm_send(atm, command, strlen(command));
