@@ -28,12 +28,6 @@ int is_safe_to_add(int a, int b)
     return 1;
 }
 
-typedef struct _User
-{
-    char pin[5];
-    int balance;
-} User;
-
 Bank *bank_create()
 {
     Bank *bank = (Bank *)malloc(sizeof(Bank));
@@ -93,9 +87,8 @@ ssize_t bank_recv(Bank *bank, char *data, size_t max_data_len)
 
 void bank_process_local_command(Bank *bank, char *command, size_t len)
 {
-    // TODO: Implement the bank's local commands
     char *string = strdup(command);
-    char *tofree = string;
+    /*char *tofree = string;*/
     char *token = strsep(&string, " \n");
     if (strcmp(token, "create-user") == 0)
     {
@@ -145,11 +138,7 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
             return;
         }
 
-        User *newUser = (User *)malloc(sizeof(User));
-        strcpy(newUser->pin, pin);
-        newUser->balance = atoi(balance);
-
-        hash_table_add(bank->users, username, newUser);
+        hash_table_add(bank->users, username, balance);
 
         char filename[256];
         strncpy(filename, username, strlen(username) + 1);
@@ -169,10 +158,6 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
         printf("Created user %s\n", username);
     }
     else if (strcmp(token, "balance") == 0)
-    /* Bug: create a user, try to check balance. No user found,
-    try to create same user, get error msg. Then check balance,
-    successfully returns balance
-    */
     {
         char *username = strsep(&string, " \n");
         char *extra = strsep(&string, " \n");
@@ -195,11 +180,10 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
 	    return;
         }
 
-        if (hash_table_find(bank->users, username) != NULL)
+	char *balance = hash_table_find(bank->users, username);
+        if (balance != NULL)
         {
-            printf("$");
-            User *u = hash_table_find(bank->users, username);
-            printf("%d\n", (*u).balance);
+            printf("$%s\n", balance);
         }
         else
         {
@@ -237,8 +221,8 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
             return;
         }
 
-        User *user = hash_table_find(bank->users, username);
-        if (user == NULL)
+        char *balance = hash_table_find(bank->users, username);
+        if (balance == NULL)
         {
             printf("No such user\n");
             return;
@@ -247,21 +231,26 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
         long longAmt = strtoll(amt, NULL, 0);
         if (
             longAmt > INT_MAX ||
-            !is_safe_to_add(user->balance, atoi(amt)))
+            !is_safe_to_add(atoi(balance), atoi(amt)))
         {
             printf("Too rich for this program\n");
             return;
         }
 
-        user->balance = user->balance + atoi(amt);
+	int newBalance = atoi(balance) + atoi(amt);
+	char* newBalanceStr = malloc(12);
+	snprintf(newBalanceStr, 12, "%d", newBalance);
+
+        hash_table_del(bank->users, username);
+        hash_table_add(bank->users, username, newBalanceStr);
 
         printf("$%s added to %s's account\n", amt, username);
     }
 
-    if (tofree != NULL)
+    /*if (tofree != NULL)
     {
         free(tofree);
-    }
+    }*/
 }
 
 void bank_process_remote_command(Bank *bank, char *command, size_t len)
