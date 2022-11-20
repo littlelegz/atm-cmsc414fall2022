@@ -245,12 +245,43 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
         hash_table_add(bank->users, username, newBalanceStr);
 
         printf("$%s added to %s's account\n", amt, username);
-    }
+    } 
 
     /*if (tofree != NULL)
     {
         free(tofree);
     }*/
+}
+
+void bank_withdraw(Bank *bank, char *command, size_t len) {
+    char *string = strdup(command);
+    char *token = strsep(&string, " \n");
+
+    char *username = strsep(&string, " ");
+    char *amt = strsep(&string, " \n");
+    char *extra = strsep(&string, " \n");
+
+    char *balance = hash_table_find(bank->users, username);
+    if (balance == NULL)
+    {
+        // printf("No such user\n");
+        return;
+    }
+
+	int newBalance = atoi(balance) - atoi(amt);
+
+    if (newBalance < 0) {
+        printf("Insufficient funds\n\n");
+        return;
+    }
+
+	char* newBalanceStr = malloc(12);
+	snprintf(newBalanceStr, 12, "%d", newBalance);
+
+    hash_table_del(bank->users, username);
+    hash_table_add(bank->users, username, newBalanceStr);
+
+    printf("$%s dispensed\n\n", amt);
 }
 
 void bank_process_remote_command(Bank *bank, char *command, size_t len)
@@ -263,11 +294,19 @@ void bank_process_remote_command(Bank *bank, char *command, size_t len)
      * it back to the ATM before printing it to stdout.
      */
 
-    char sendline[1000];
-    command[len] = 0;
-    sprintf(sendline, "Bank got: %s\n", command);
-    bank_send(bank, sendline, strlen(sendline));
-    printf("Received the following:\n");
-    fputs(command, stdout);
-    fflush(stdout);
+    // char sendline[1000];
+    // command[len] = 0;
+    // sprintf(sendline, "Bank got: %s\n", command);
+    // bank_send(bank, sendline, strlen(sendline));
+    // printf("Received the following:\n");
+    // fputs(command, stdout);
+    // fflush(stdout);
+
+        
+    char *string = strdup(command);
+    char *token = strsep(&string, " \n");
+
+    if (strcmp(token, "withdraw") == 0) {
+        bank_withdraw(bank, command, len);
+    }
 }
