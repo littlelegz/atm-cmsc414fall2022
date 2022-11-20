@@ -264,14 +264,14 @@ void bank_withdraw(Bank *bank, char *command, size_t len) {
     char *balance = hash_table_find(bank->users, username);
     if (balance == NULL)
     {
-        // printf("No such user\n");
+        //bank_send(bank, "No such user\n\n", 14);
         return;
     }
 
 	int newBalance = atoi(balance) - atoi(amt);
 
     if (newBalance < 0) {
-        printf("Insufficient funds\n\n");
+        bank_send(bank, "Insufficient funds\n\n", 21);
         return;
     }
 
@@ -281,7 +281,9 @@ void bank_withdraw(Bank *bank, char *command, size_t len) {
     hash_table_del(bank->users, username);
     hash_table_add(bank->users, username, newBalanceStr);
 
-    printf("$%s dispensed\n\n", amt);
+    char response[400];
+    sprintf(response, "$%s dispensed\n\n", amt);
+    bank_send(bank, response, strlen(response));
 }
 
 void bank_process_remote_command(Bank *bank, char *command, size_t len)
