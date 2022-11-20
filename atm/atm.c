@@ -182,7 +182,7 @@ void begin_session(ATM *atm, char *name)
                     fflush(stdout);
                     continue;
                 }
-                //printf("[*] Running authenticated command balance\n");
+                // printf("[*] Running authenticated command balance\n");
                 balance(atm, name);
             }
             else if (strcmp(token, "withdraw") == 0)
@@ -196,16 +196,17 @@ void begin_session(ATM *atm, char *name)
                     fflush(stdout);
                     continue;
                 }
-                if (atoi(amt) < 0 || (atoi(amt) == 0 && amt[0] != '0')) {
-                // Check if is negative, or if cannot convert to int and is not zero
-                // Wrap around is converted to negative, so no need to check for overflow 
-                    //printf("Incorrect amt input. Int converted was%d\n", atoi(amt));
+                if (atoi(amt) < 0 || (atoi(amt) == 0 && amt[0] != '0'))
+                {
+                    // Check if is negative, or if cannot convert to int and is not zero
+                    // Wrap around is converted to negative, so no need to check for overflow
+                    // printf("Incorrect amt input. Int converted was%d\n", atoi(amt));
                     printf("Usage: withdraw <amt>\n\n");
                     printf("ATM (%s):  ", name);
                     fflush(stdout);
                     continue;
                 }
-                //printf("[*] Running authenticated command withdraw\n");
+                // printf("[*] Running authenticated command withdraw\n");
                 withdraw(atm, name, amt);
             }
             else if (strcmp(token, "end-session") == 0)

@@ -212,8 +212,8 @@ void bank_process_deposit(Bank *bank, char *args)
     if (
         regexec(&usernameRegex, username, 0, NULL, 0) ||
         regexec(&amtRegex, amt, 0, NULL, 0) ||
-        atoi(amt) < 0
-    ) {
+        atoi(amt) < 0)
+    {
         printf("Usage:  deposit <user-name> <amt>\n");
         return;
     }
