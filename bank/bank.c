@@ -245,6 +245,8 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
         hash_table_add(bank->users, username, newBalanceStr);
 
         printf("$%s added to %s's account\n", amt, username);
+    } else {
+        printf("Invalid command\n");
     }
 
     /*if (tofree != NULL)
