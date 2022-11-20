@@ -75,7 +75,7 @@ void atm_process_command(ATM *atm, char *command)
         token = strtok(NULL, delimit);
         if (token != NULL || name == NULL)
         {
-            printf("Usage:  begin-session <user-name>\n");
+            printf("Usage:  begin-session <user-name>\n\n");
             fflush(stdout);
         }
         else
@@ -88,11 +88,11 @@ void atm_process_command(ATM *atm, char *command)
              strcmp(command, "withdraw") == 0 ||
              strcmp(command, "balance") == 0)
     {
-        printf("No user logged in\n");
+        printf("No user logged in\n\n");
     }
     else
     {
-        printf("Invalid command\n");
+        printf("Invalid command\n\n");
     }
 
     /*
@@ -118,14 +118,14 @@ void begin_session(ATM *atm, char *name)
         userfile = fopen(usercard, "r");
         if (!userfile)
         {
-            printf("Unable to access %s's card\n", name);
+            printf("Unable to access %s's card\n\n", name);
             return;
         }
     }
     else
     {
         // file doesn't exist
-        printf("No such user\n");
+        printf("No such user\n\n");
         return;
     }
 
@@ -148,7 +148,7 @@ void begin_session(ATM *atm, char *name)
     fgets(user_input, 1000, stdin);
     if (user_input == NULL)
     {
-        printf("Not authorized\n");
+        printf("Not authorized\n\n");
         return;
     }
     int incode = atoi(user_input);
@@ -158,7 +158,7 @@ void begin_session(ATM *atm, char *name)
     if (incode == pincode)
     {
         // User is authenticated, prompt for further instructions
-        printf("Authorized\n");
+        printf("Authorized\n\n");
         printf("ATM (%s):  ", name);
         fflush(stdout);
         while (fgets(user_input, 1000, stdin) != NULL)
@@ -177,12 +177,12 @@ void begin_session(ATM *atm, char *name)
                 token = strtok(NULL, delimit);
                 if (token != NULL)
                 {
-                    printf("Usage: balance\n");
+                    printf("Usage: balance\n\n");
                     printf("ATM (%s):  ", name);
                     fflush(stdout);
                     continue;
                 }
-                printf("[*] Running authenticated command balance\n");
+                //printf("[*] Running authenticated command balance\n");
                 balance(atm, name);
             }
             else if (strcmp(token, "withdraw") == 0)
@@ -191,7 +191,7 @@ void begin_session(ATM *atm, char *name)
                 token = strtok(NULL, delimit);
                 if (token != NULL || amt == NULL)
                 {
-                    printf("Usage: withdraw <amt>\n");
+                    printf("Usage: withdraw <amt>\n\n");
                     printf("ATM (%s):  ", name);
                     fflush(stdout);
                     continue;
@@ -204,21 +204,21 @@ void begin_session(ATM *atm, char *name)
                     fflush(stdout);
                     continue;
                 }
-                printf("[*] Running authenticated command withdraw\n");
+                //printf("[*] Running authenticated command withdraw\n");
                 withdraw(atm, name, amt);
             }
             else if (strcmp(token, "end-session") == 0)
             { // end-session command
-                printf("User logged out\n");
+                printf("User logged out\n\n");
                 return;
             }
             else if (strcmp(token, "begin-session") == 0)
             {
-                printf("A user is already logged in\n");
+                printf("A user is already logged in\n\n");
             }
             else
             {
-                printf("Invalid command\n");
+                printf("Invalid command\n\n");
             }
 
             printf("ATM (%s):  ", name);
@@ -227,7 +227,7 @@ void begin_session(ATM *atm, char *name)
     }
     else
     {
-        printf("Not authorized\n");
+        printf("Not authorized\n\n");
     }
 
     /* while ((read = getline(&line, &len, userfile)) != -1) {
@@ -254,7 +254,7 @@ void withdraw(ATM *atm, char *user, char *amt)
     char recvline[10000];
     int n;
     char command[400];
-    sprintf(command, "withdraw %s %s", user, amt);
+    sprintf(command, "withdraw %s %s\n", user, amt);
 
     // Sending withdraw command
     atm_send(atm, command, strlen(command));
