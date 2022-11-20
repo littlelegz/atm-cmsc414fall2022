@@ -255,6 +255,39 @@ void bank_process_local_command(Bank *bank, char *command, size_t len)
     }*/
 }
 
+void bank_withdraw(Bank *bank, char *command, size_t len) {
+    char *string = strdup(command);
+    char *token = strsep(&string, " \n");
+
+    char *username = strsep(&string, " ");
+    char *amt = strsep(&string, " \n");
+    char *extra = strsep(&string, " \n");
+
+    char *balance = hash_table_find(bank->users, username);
+    if (balance == NULL)
+    {
+        //bank_send(bank, "No such user\n\n", 14);
+        return;
+    }
+
+	int newBalance = atoi(balance) - atoi(amt);
+
+    if (newBalance < 0) {
+        bank_send(bank, "Insufficient funds\n\n", 21);
+        return;
+    }
+
+	char* newBalanceStr = malloc(12);
+	snprintf(newBalanceStr, 12, "%d", newBalance);
+
+    hash_table_del(bank->users, username);
+    hash_table_add(bank->users, username, newBalanceStr);
+
+    char response[400];
+    sprintf(response, "$%s dispensed\n\n", amt);
+    bank_send(bank, response, strlen(response));
+}
+
 void bank_process_remote_command(Bank *bank, char *command, size_t len)
 {
     // TODO: Implement the bank side of the ATM-bank protocol
@@ -265,11 +298,19 @@ void bank_process_remote_command(Bank *bank, char *command, size_t len)
      * it back to the ATM before printing it to stdout.
      */
 
-    char sendline[1000];
-    command[len] = 0;
-    sprintf(sendline, "Bank got: %s\n", command);
-    bank_send(bank, sendline, strlen(sendline));
-    printf("Received the following:\n");
-    fputs(command, stdout);
-    fflush(stdout);
+    // char sendline[1000];
+    // command[len] = 0;
+    // sprintf(sendline, "Bank got: %s\n", command);
+    // bank_send(bank, sendline, strlen(sendline));
+    // printf("Received the following:\n");
+    // fputs(command, stdout);
+    // fflush(stdout);
+
+        
+    char *string = strdup(command);
+    char *token = strsep(&string, " \n");
+
+    if (strcmp(token, "withdraw") == 0) {
+        bank_withdraw(bank, command, len);
+    }
 }
