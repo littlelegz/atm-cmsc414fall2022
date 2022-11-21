@@ -1,6 +1,4 @@
 *~
-bin/atm
-bin/bank
-bin/router
+bin
 *.c.swp
 *.h.swp
