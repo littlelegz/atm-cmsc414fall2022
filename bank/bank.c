@@ -5,6 +5,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <limits.h>
+#include <openssl/evp.h>
+#include <openssl/conf.h>
+#include <openssl/err.h>
+#include <openssl/crypto.h>
+#include <openssl/rand.h>
+#include <openssl/bio.h>
+#include <string.h>
 #include "../util/hash_table.h"
 
 // TODO: relocate to utils
@@ -28,7 +35,65 @@ int is_safe_to_add(int a, int b)
     return 1;
 }
 
-Bank *bank_create()
+// Source: https://wiki.openssl.org/index.php/EVP_Symmetric_Encryption_and_Decryption
+int encrypt(
+    unsigned char *plaintext,
+    int plaintext_len,
+    unsigned char *key,
+    unsigned char *iv,
+    unsigned char *ciphertext
+)
+{
+    EVP_CIPHER_CTX *ctx;
+
+    int len;
+
+    int ciphertext_len;
+
+    /* Create and initialise the context */
+    if (!(ctx = EVP_CIPHER_CTX_new())) {
+        return 0;
+    }
+
+    /*
+     * Initialise the encryption operation. IMPORTANT - ensure you use a key
+     * and IV size appropriate for your cipher
+     * In this example we are using 256 bit AES (i.e. a 256 bit key). The
+     * IV size for *most* modes is the same as the block size. For AES this
+     * is 128 bits
+     */
+    if (1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv)) {
+        return 0;
+    }
+
+    /*
+     * Provide the message to be encrypted, and obtain the encrypted output.
+     * EVP_EncryptUpdate can be called multiple times if necessary
+     */
+    if (1 != EVP_EncryptUpdate(ctx, ciphertext, &len, plaintext, plaintext_len)) {
+        return 0;
+    }
+
+    ciphertext_len = len;
+
+    /*
+     * Finalise the encryption. Further ciphertext bytes may be written at
+     * this stage.
+     */
+    if(1 != EVP_EncryptFinal_ex(ctx, ciphertext + len, &len)) {
+        return 0;
+    }
+
+    ciphertext_len += len;
+
+    /* Clean up */
+    EVP_CIPHER_CTX_free(ctx);
+
+    return ciphertext_len;
+}
+
+
+Bank *bank_create(unsigned char *key, unsigned char *iv)
 {
     Bank *bank = (Bank *)malloc(sizeof(Bank));
     if (bank == NULL)
@@ -60,6 +125,11 @@ Bank *bank_create()
     hash_table_add(bank->users, "jerry", &a);
     User *b = hash_table_find(bank->users, "jerry");
     printf("Jerry -> %s\n", (*b).pin);*/
+
+    bank->key = key;
+    bank->iv = iv;
+    //printf("key: %s\n", bank->key);
+    //printf("iv: %s\n", bank->iv);
 
     return bank;
 }
@@ -148,7 +218,28 @@ void bank_process_create_user(Bank *bank, char *args)
         return;
     }
 
-    fprintf(fp, "%s\n", pin);
+    unsigned char ciphertext[128];
+    int ciphertext_len;
+
+    ciphertext_len = encrypt(
+	(unsigned char *) pin,
+	strlen ((char *) pin),
+	bank->key,
+	bank->iv,
+	ciphertext
+    );
+
+    //printf("Ciphertext is:\n");
+    //BIO_dump_fp(fp, (const char *)ciphertext, ciphertext_len);
+    BIO *bio, *b64;
+    b64 = BIO_new(BIO_f_base64());
+    bio = BIO_new_fp(fp, BIO_NOCLOSE);
+    BIO_push(b64, bio);
+    BIO_write(b64, ciphertext, ciphertext_len);
+    BIO_flush(b64);
+    BIO_free_all(b64);
+
+    //fprintf(fp, "%x\n", pin);
     fclose(fp);
 
     printf("Created user %s\n\n", username);

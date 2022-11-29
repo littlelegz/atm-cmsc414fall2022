@@ -20,12 +20,24 @@ int main(int argc, char**argv)
         printf("Error opening bank initialization file\n");
 	exit(64);
    }
+
+   char line[97];
+   char key[65];
+   char iv[33];
+   fgets(line, 97, bankfile);
+   strncpy(key, line, 64);
+   key[64] = '\0';
+   strncpy(iv, line + 64, 32);
+   iv[32] = '\0';
    
    int n;
    char sendline[1000];
    char recvline[1000];
 
-   Bank *bank = bank_create();
+   Bank *bank = bank_create(
+	(unsigned char *) key,
+	(unsigned char *) iv
+   );
 
    printf("%s", prompt);
    fflush(stdout);

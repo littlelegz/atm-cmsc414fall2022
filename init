@@ -16,17 +16,14 @@ then
 fi
 
 gen_aes_key () {
-  openssl enc -aes-256-cbc -pass pass:key1 -P -pbkdf2 -iter 10000 | sed '1d' | sed 's/.*key=//' | sed 's/.*iv =//'
+  openssl enc -aes-256-cbc -pass pass:key1 -P -pbkdf2 -iter 10000 | sed '1d' | sed 's/.*key=//' | sed 's/.*iv =//' | tr -d '\n'
 }
 
 if (touch "$BANK_FILE" && touch "$ATM_FILE");
 then
-  CARD_KEY=$(gen_aes_key)
-  COMM_KEY=$(gen_aes_key)
-  echo "$CARD_KEY" >> $ATM_FILE
-  echo "$CARD_KEY" >> $BANK_FILE
-  echo "$COMM_KEY" >> $ATM_FILE
-  echo "$COMM_KEY" >> $BANK_FILE
+  AES_KEY=$(gen_aes_key)
+  echo $AES_KEY >> $ATM_FILE
+  echo $AES_KEY >> $BANK_FILE
   echo "Successfully initialized bank state"
   exit 0
 else

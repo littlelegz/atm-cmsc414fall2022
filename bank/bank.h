@@ -31,6 +31,9 @@ typedef struct _Bank
     // Protocol state
     HashTable *users;
     HashTable *ids;
+
+    unsigned char *key;
+    unsigned char *iv;
 } Bank;
 
 Bank* bank_create();
