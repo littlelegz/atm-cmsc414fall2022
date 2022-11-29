@@ -15,15 +15,19 @@ then
   exit 63
 fi
 
+gen_aes_key () {
+  openssl enc -aes-256-cbc -pass pass:key1 -P -pbkdf2 -iter 10000 | sed '1d' | sed 's/.*key=//' | sed 's/.*iv =//'
+}
+
 if (touch "$BANK_FILE" && touch "$ATM_FILE");
 then
+  CARD_KEY=$(gen_aes_key)
+  COMM_KEY=$(gen_aes_key)
+  echo "$CARD_KEY" >> $ATM_FILE
+  echo "$CARD_KEY" >> $BANK_FILE
+  echo "$COMM_KEY" >> $ATM_FILE
+  echo "$COMM_KEY" >> $BANK_FILE
   echo "Successfully initialized bank state"
-  SECRET=$(openssl enc -nosalt -aes-256-cbc -k key1 -P)
-  SECRET2=$(openssl enc -nosalt -aes-256-cbc -k key2 -P)
-  echo $SECRET >> "$ATM_FILE"
-  echo $SECRET >> "$BANK_FILE"
-  echo $SECRET2 >> "$ATM_FILE"
-  echo $SECRET2 >> "$BANK_FILE"
   exit 0
 else
   echo "Error creating initialization files"
