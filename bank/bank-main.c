@@ -29,6 +29,8 @@ int main(int argc, char**argv)
    key[64] = '\0';
    strncpy(iv, line + 64, 32);
    iv[32] = '\0';
+   //printf("key: %s\n", key);
+   //printf("iv: %s\n", iv);
    
    int n;
    char sendline[1000];

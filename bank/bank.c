@@ -229,6 +229,8 @@ void bank_process_create_user(Bank *bank, char *args)
 	ciphertext
     );
 
+    printf("Ciphertext length: %d\n", ciphertext_len);
+
     //printf("Ciphertext is:\n");
     //BIO_dump_fp(fp, (const char *)ciphertext, ciphertext_len);
     BIO *bio, *b64;

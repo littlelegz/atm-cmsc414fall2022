@@ -4,8 +4,55 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <openssl/bio.h>
+#include <openssl/evp.h>
 
-ATM *atm_create()
+int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key,
+            unsigned char *iv, unsigned char *plaintext)
+{
+    EVP_CIPHER_CTX *ctx;
+
+    int len;
+
+    int plaintext_len;
+
+    /* Create and initialise the context */
+    if(!(ctx = EVP_CIPHER_CTX_new()))
+        return 0;
+
+    /*
+     * Initialise the decryption operation. IMPORTANT - ensure you use a key
+     * and IV size appropriate for your cipher
+     * In this example we are using 256 bit AES (i.e. a 256 bit key). The
+     * IV size for *most* modes is the same as the block size. For AES this
+     * is 128 bits
+     */
+    if(1 != EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv))
+        return 0;
+
+    /*
+     * Provide the message to be decrypted, and obtain the plaintext output.
+     * EVP_DecryptUpdate can be called multiple times if necessary.
+     */
+    if(1 != EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertext_len))
+        return 0;
+    plaintext_len = len;
+
+    /*
+     * Finalise the decryption. Further plaintext bytes may be written at
+     * this stage.
+     */
+    if(1 != EVP_DecryptFinal_ex(ctx, plaintext + len, &len))
+        return 0;
+    plaintext_len += len;
+
+    /* Clean up */
+    EVP_CIPHER_CTX_free(ctx);
+
+    return plaintext_len;
+}
+
+ATM *atm_create(unsigned char *key, unsigned char *iv)
 {
     ATM *atm = (ATM *)malloc(sizeof(ATM));
     if (atm == NULL)
@@ -39,6 +86,11 @@ ATM *atm_create()
     
     // Initialize random seed for command IDs
     srand(time(NULL));
+
+    atm->key = key;
+    atm->iv = iv;
+    //printf("key: %s\n", atm->key);
+    //printf("iv: %s\n", atm->iv);
 
     return atm;
 }
@@ -142,13 +194,33 @@ void begin_session(ATM *atm, char *name)
     // printf("[*] Sucessfully found usercard: %s\n", usercard);
 
     // Read in pin (assumed to be first line of user.card)
-    char *pin = NULL;
+    char *card = NULL;
     size_t len = 0;
     char user_input[1001];
 
     // Read pin from .card file
-    getline(&pin, &len, userfile);
-    int pincode = atoi(pin);
+    getline(&card, &len, userfile);
+    int card_length = strlen(card);
+    //printf("Card: %s", card);
+    //printf("Length of card: %d\n", card_length);
+
+    BIO *b64, *bmem;
+    unsigned char *pin_ciphertext = (unsigned char *) malloc(card_length);
+    memset(pin_ciphertext, 0, card_length);
+    b64 = BIO_new(BIO_f_base64());
+    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
+    bmem = BIO_new_mem_buf(card, card_length);
+    bmem = BIO_push(b64, bmem);
+    int pin_ciphertext_len = BIO_read(bmem, pin_ciphertext, card_length);
+    BIO_free_all(bmem);
+
+    //printf("Length of base64 decoded PIN ciphertext: %d\n", pin_ciphertext_len);
+    //printf("Decoded PIN ciphertext: %s\n", pin_ciphertext);
+    
+    unsigned char pin[128];
+    decrypt(pin_ciphertext, pin_ciphertext_len, atm->key, atm->iv, pin);
+
+    int pincode = atoi((char *) pin);
     // printf("Read pin as: %d\n", pincode);
     // Prompt user for pin and read user input
     // [*] For some reason, I needed to convert strings to ints to comp
