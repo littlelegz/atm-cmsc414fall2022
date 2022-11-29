@@ -45,6 +45,17 @@ ssize_t bank_recv(Bank *bank, char *data, size_t max_data_len);
 void bank_process_local_command(Bank *bank, char *command, size_t len);
 void bank_process_remote_command(Bank *bank, char *command, size_t len);
 void bank_process_withdraw(Bank *bank, char *command);
+int encrypt(
+    unsigned char *plaintext,
+    int plaintext_len,
+    unsigned char *key,
+    unsigned char *iv,
+    unsigned char *ciphertext
+);
+int sign_it(const byte* msg, size_t mlen, byte** sig, size_t* slen, EVP_PKEY* pkey);
+int verify_it(const byte* msg, size_t mlen, const byte* sig, size_t slen, EVP_PKEY* pkey);
+void print_it(const char* label, const byte* buff, size_t len);
+
 
 #endif
 

@@ -92,6 +92,188 @@ int encrypt(
     return ciphertext_len;
 }
 
+// HMAC code from https://wiki.openssl.org/index.php/EVP_Signing_and_Verifying#Calculating_HMAC
+typedef unsigned char byte;
+const char hn[] = "SHA256";
+
+int sign_it(const byte* msg, size_t mlen, byte** sig, size_t* slen, EVP_PKEY* pkey)
+{
+    /* Returned to caller */
+    int result = -1;
+    
+    if(!msg || !mlen || !sig || !pkey) {
+        return -1;
+    }
+    
+    if(*sig)
+        OPENSSL_free(*sig);
+    
+    *sig = NULL;
+    *slen = 0;
+    
+    EVP_MD_CTX* ctx = NULL;
+    
+    do
+    {
+        ctx = EVP_MD_CTX_create();
+        if(ctx == NULL) {
+            printf("EVP_MD_CTX_create failed, error 0x%lx\n", ERR_get_error());
+            break; /* failed */
+        }
+        
+        const EVP_MD* md = EVP_get_digestbyname(hn);
+        if(md == NULL) {
+            printf("EVP_get_digestbyname failed, error 0x%lx\n", ERR_get_error());
+            break; /* failed */
+        }
+        
+        int rc = EVP_DigestInit_ex(ctx, md, NULL);
+        if(rc != 1) {
+            printf("EVP_DigestInit_ex failed, error 0x%lx\n", ERR_get_error());
+            break; /* failed */
+        }
+        
+        rc = EVP_DigestSignInit(ctx, NULL, md, NULL, pkey);
+        if(rc != 1) {
+            printf("EVP_DigestSignInit failed, error 0x%lx\n", ERR_get_error());
+            break; /* failed */
+        }
+        
+        rc = EVP_DigestSignUpdate(ctx, msg, mlen);
+        if(rc != 1) {
+            printf("EVP_DigestSignUpdate failed, error 0x%lx\n", ERR_get_error());
+            break; /* failed */
+        }
+        
+        size_t req = 0;
+        rc = EVP_DigestSignFinal(ctx, NULL, &req);
+        if(rc != 1) {
+            printf("EVP_DigestSignFinal failed (1), error 0x%lx\n", ERR_get_error());
+            break; /* failed */
+        }
+        
+        if(!(req > 0)) {
+            printf("EVP_DigestSignFinal failed (2), error 0x%lx\n", ERR_get_error());
+            break; /* failed */
+        }
+        
+        *sig = OPENSSL_malloc(req);
+        if(*sig == NULL) {
+            printf("OPENSSL_malloc failed, error 0x%lx\n", ERR_get_error());
+            break; /* failed */
+        }
+        
+        *slen = req;
+        rc = EVP_DigestSignFinal(ctx, *sig, slen);
+        if(rc != 1) {
+            printf("EVP_DigestSignFinal failed (3), return code %d, error 0x%lx\n", rc, ERR_get_error());
+            break; /* failed */
+        }
+        
+        if(rc != 1) {
+            printf("EVP_DigestSignFinal failed, mismatched signature sizes %ld, %ld", req, *slen);
+            break; /* failed */
+        }
+        
+        result = 0;
+        
+    } while(0);
+    
+    if(ctx) {
+        EVP_MD_CTX_destroy(ctx);
+        ctx = NULL;
+    }
+    
+    /* Convert to 0/1 result */
+    return !!result;
+}
+
+int verify_it(const byte* msg, size_t mlen, const byte* sig, size_t slen, EVP_PKEY* pkey)
+{
+    /* Returned to caller */
+    int result = -1;
+    
+    if(!msg || !mlen || !sig || !slen || !pkey) {
+        return -1;
+    }
+
+    EVP_MD_CTX* ctx = NULL;
+    
+    do
+    {
+        ctx = EVP_MD_CTX_create();
+        if(ctx == NULL) {
+            printf("EVP_MD_CTX_create failed, error 0x%lx\n", ERR_get_error());
+            break; /* failed */
+        }
+        
+        const EVP_MD* md = EVP_get_digestbyname(hn);
+        if(md == NULL) {
+            printf("EVP_get_digestbyname failed, error 0x%lx\n", ERR_get_error());
+            break; /* failed */
+        }
+        
+        int rc = EVP_DigestInit_ex(ctx, md, NULL);
+        if(rc != 1) {
+            printf("EVP_DigestInit_ex failed, error 0x%lx\n", ERR_get_error());
+            break; /* failed */
+        }
+        
+        rc = EVP_DigestSignInit(ctx, NULL, md, NULL, pkey);
+        if(rc != 1) {
+            printf("EVP_DigestSignInit failed, error 0x%lx\n", ERR_get_error());
+            break; /* failed */
+        }
+        
+        rc = EVP_DigestSignUpdate(ctx, msg, mlen);
+        if(rc != 1) {
+            printf("EVP_DigestSignUpdate failed, error 0x%lx\n", ERR_get_error());
+            break; /* failed */
+        }
+        
+        byte buff[EVP_MAX_MD_SIZE];
+        size_t size = sizeof(buff);
+        
+        rc = EVP_DigestSignFinal(ctx, buff, &size);
+        if(rc != 1) {
+            printf("EVP_DigestVerifyFinal failed, error 0x%lx\n", ERR_get_error());
+            break; /* failed */
+        }
+        
+        if(!(size > 0)) {
+            printf("EVP_DigestSignFinal failed (2)\n");
+            break; /* failed */
+        }
+        
+        const size_t m = (slen < size ? slen : size);
+        result = !!CRYPTO_memcmp(sig, buff, m);
+        
+        OPENSSL_cleanse(buff, sizeof(buff));
+        
+    } while(0);
+    
+    if(ctx) {
+        EVP_MD_CTX_destroy(ctx);
+        ctx = NULL;
+    }
+    
+    /* Convert to 0/1 result */
+    return !!result;
+}
+
+void print_it(const char* label, const byte* buff, size_t len)
+{
+    if(!buff || !len)
+        return;
+    
+    if(label)
+        printf("%s: ", label);
+    
+    for(size_t i=0; i < len; ++i)
+        printf("%02X", buff[i]);
+    
+    printf("\n");
+}
 
 Bank *bank_create(unsigned char *key, unsigned char *iv)
 {
@@ -413,13 +595,34 @@ void bank_process_remote_command(Bank *bank, char *command, size_t len)
     // command[len] = 0;
     // sprintf(sendline, "Bank got: %s\n", command);
     // bank_send(bank, sendline, strlen(sendline));
-    // printf("Received the following:\n");
-    // fputs(command, stdout);
-    // fflush(stdout);
 
+    // Code for verifying command using signature NOT WORKING
+    
     char *string = strdup(command);
     char* id = strsep(&string, " ");
-    char *token = strsep(&string, " \n");
+    // Changed syntax of command to be comma separated will account for this below
+    char *comm = strsep(&string, "\n");
+    byte* sig = strsep(&string, "\n");
+
+    char check[400];
+    sprintf(check, "%s %s\n", id, comm);
+
+    // Verifying that received msg has not been tampered
+    printf("Check is: %s\nCommand size: %ld\n\n", check, strlen(check));
+    // Checking received sig
+    print_it("Signature", sig, 32);
+    // A balance command will need to be -39
+    //
+    // Signature will always be 32 long
+    /*int rc = verify_it(check, strlen(check), sig, 32, bank->key);
+    if(rc == 0) {
+        printf("Verified signature\n");
+    } else {
+        printf("Failed to verify signature, return code %d\n", rc);
+    }*/
+
+    printf("Received tokens id: %s, and command: %s\n\n", id, comm);
+    fflush(stdout);
 
     if (hash_table_find(bank->ids, id) != NULL)
     {
@@ -428,13 +631,25 @@ void bank_process_remote_command(Bank *bank, char *command, size_t len)
 
     hash_table_add(bank->users, id, "");
 
+    char* token = strsep(&comm, ",");
+
     if (strcmp(token, "withdraw") == 0)
     {
-        bank_process_withdraw(bank, string);
+        string = strdup(comm);
+        char* id = strsep(&string, ",");
+        char* amount = strsep(&string, "\n");
+        char withdraw[400];
+        sprintf(withdraw, "%s %s\n", id, amount);
+
+        bank_process_withdraw(bank, withdraw);
     }
     else if (strcmp(token, "balance") == 0)
     {
-        char *ret = bank_process_balance(bank, string);
+        string = strdup(comm);
+        char* id = strsep(&string, "\n");
+        char balance[400];
+        sprintf(balance, "%s\n", id);
+        char *ret = bank_process_balance(bank, balance);
         char response[400];
         sprintf(response, "%s\n\n", ret);
         bank_send(bank, response, strlen(response));

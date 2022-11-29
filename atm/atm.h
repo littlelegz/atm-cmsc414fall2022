@@ -30,6 +30,7 @@ typedef struct _ATM
     unsigned char *iv;
     EVP_PKEY *pkey;
 } ATM;
+typedef unsigned char byte;
 
 ATM* atm_create();
 void atm_free(ATM *atm);
@@ -39,5 +40,9 @@ void atm_process_command(ATM *atm, char *command);
 void begin_session(ATM *atm, char* name);
 void balance(ATM *atm, char *user);
 void withdraw(ATM *atm, char *user, char *amt);
+int sign_it(const byte* msg, size_t mlen, byte** sig, size_t* slen, EVP_PKEY* pkey);
+int verify_it(const byte* msg, size_t mlen, const byte* sig, size_t slen, EVP_PKEY* pkey);
+void print_it(const char* label, const byte* buff, size_t len);
+int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key, unsigned char *iv, unsigned char *plaintext);
 
 #endif
