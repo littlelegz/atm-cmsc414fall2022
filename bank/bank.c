@@ -128,6 +128,7 @@ Bank *bank_create(unsigned char *key, unsigned char *iv)
 
     bank->key = key;
     bank->iv = iv;
+    bank->pkey = EVP_PKEY_new_mac_key(EVP_PKEY_HMAC, NULL, key, strlen((char*)key));
     //printf("key: %s\n", bank->key);
     //printf("iv: %s\n", bank->iv);
 

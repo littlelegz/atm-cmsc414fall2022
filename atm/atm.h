@@ -15,6 +15,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdio.h>
+#include <openssl/evp.h>
 
 typedef struct _ATM
 {
@@ -27,6 +28,7 @@ typedef struct _ATM
     // TODO add more, as needed
     unsigned char *key;
     unsigned char *iv;
+    EVP_PKEY *pkey;
 } ATM;
 
 ATM* atm_create();

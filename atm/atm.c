@@ -52,6 +52,113 @@ int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key,
     return plaintext_len;
 }
 
+int hmac_it(char *msg, size_t mlen, unsigned char **val, size_t *vlen, EVP_PKEY *pkey)
+{
+    /* Returned to caller */
+    int result = 0;
+    EVP_MD_CTX* ctx = NULL;
+    size_t req = 0;
+    int rc;
+    
+    if(!msg || !mlen || !val || !pkey)
+        return 0;
+    
+    *val = NULL;
+    *vlen = 0;
+
+    ctx = EVP_MD_CTX_new();
+    if (ctx == NULL) {
+        //printf("EVP_MD_CTX_create failed, error 0x%lx\n", ERR_get_error());
+        goto err;
+    }
+    
+    rc = EVP_DigestSignInit(ctx, NULL, EVP_sha256(), NULL, pkey);
+    if (rc != 1) {
+        //printf("EVP_DigestSignInit failed, error 0x%lx\n", ERR_get_error());
+        goto err;
+    }
+    
+    rc = EVP_DigestSignUpdate(ctx, msg, mlen);
+    if (rc != 1) {
+        //printf("EVP_DigestSignUpdate failed, error 0x%lx\n", ERR_get_error());
+        goto err;
+    }
+    
+    rc = EVP_DigestSignFinal(ctx, NULL, &req);
+    if (rc != 1) {
+       // printf("EVP_DigestSignFinal failed (1), error 0x%lx\n", ERR_get_error());
+        goto err;
+    }
+    
+    *val = OPENSSL_malloc(req);
+    if (*val == NULL) {
+        //printf("OPENSSL_malloc failed, error 0x%lx\n", ERR_get_error());
+        goto err;
+    }
+    
+    *vlen = req;
+    rc = EVP_DigestSignFinal(ctx, *val, vlen);
+    if (rc != 1) {
+        //printf("EVP_DigestSignFinal failed (3), return code %d, error 0x%lx\n", rc, ERR_get_error());
+        goto err;
+    }
+    
+    result = 1;
+    
+   
+ err:
+    printf("Failure.");
+    EVP_MD_CTX_free(ctx);
+    if (!result) {
+        OPENSSL_free(*val);
+        *val = NULL;
+    }
+    return result;
+}
+
+int verify_it(char *msg, size_t mlen, unsigned char *val, size_t vlen, EVP_PKEY *pkey)
+{
+    /* Returned to caller */
+    int result = 0;
+    EVP_MD_CTX* ctx = NULL;
+    unsigned char buff[EVP_MAX_MD_SIZE];
+    size_t size;
+    int rc;
+
+    if(!msg || !mlen || !val || !vlen || !pkey)
+        return 0;
+    
+    ctx = EVP_MD_CTX_new();
+    if (ctx == NULL) {
+       // printf("EVP_MD_CTX_create failed, error 0x%lx\n", ERR_get_error());
+        goto err;
+    }
+    
+    rc = EVP_DigestSignInit(ctx, NULL, EVP_sha256(), NULL, pkey);
+    if (rc != 1) {
+       // printf("EVP_DigestSignInit failed, error 0x%lx\n", ERR_get_error());
+        goto err;
+    }
+    
+    rc = EVP_DigestSignUpdate(ctx, msg, mlen);
+    if (rc != 1) {
+        //printf("EVP_DigestSignUpdate failed, error 0x%lx\n", ERR_get_error());
+        goto err;
+    }
+    
+    size = sizeof(buff);
+    rc = EVP_DigestSignFinal(ctx, buff, &size);
+    if (rc != 1) {
+        //printf("EVP_DigestSignFinal failed, error 0x%lx\n", ERR_get_error());
+        goto err;
+    }
+    
+    result = (vlen == size) && (CRYPTO_memcmp(val, buff, size) == 0);
+ err:
+    EVP_MD_CTX_free(ctx);
+    return result;
+}
+
 ATM *atm_create(unsigned char *key, unsigned char *iv)
 {
     ATM *atm = (ATM *)malloc(sizeof(ATM));
@@ -89,6 +196,7 @@ ATM *atm_create(unsigned char *key, unsigned char *iv)
 
     atm->key = key;
     atm->iv = iv;
+    atm->pkey = EVP_PKEY_new_mac_key(EVP_PKEY_HMAC, NULL, key, strlen((char*)key));
     //printf("key: %s\n", atm->key);
     //printf("iv: %s\n", atm->iv);
 
@@ -327,6 +435,17 @@ void balance(ATM *atm, char *user)
     sprintf(command, "%d balance %s\n", id, user);
 
     // Sending balance command
+    unsigned char** val;
+    size_t* vlen;
+    hmac_it(command, strlen(command), val, vlen, atm->pkey);
+    if (verify_it(command, strlen(command), *val, *vlen, atm->pkey)) {
+        printf("Success!");
+    } else {
+         printf("Verification failed, but the HMAC stuff didn't crash.!");
+    }
+    
+    
+
     atm_send(atm, command, strlen(command));
     n = atm_recv(atm, recvline, 10000);
     recvline[n] = 0;

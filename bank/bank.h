@@ -20,6 +20,7 @@
 #include <netinet/in.h>
 #include <stdio.h>
 #include "util/hash_table.h"
+#include <openssl/evp.h>
 
 typedef struct _Bank
 {
@@ -34,6 +35,7 @@ typedef struct _Bank
 
     unsigned char *key;
     unsigned char *iv;
+    EVP_PKEY *pkey;
 } Bank;
 
 Bank* bank_create();
