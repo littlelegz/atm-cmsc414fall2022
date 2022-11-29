@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 
 ATM *atm_create()
 {
@@ -35,6 +36,9 @@ ATM *atm_create()
     if (setsockopt(atm->sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0) {
         perror("Timeout amount not set");
     }
+    
+    // Initialize random seed for command IDs
+    srand(time(NULL));
 
     return atm;
 }
@@ -247,7 +251,8 @@ void balance(ATM *atm, char *user)
     char recvline[10000];
     int n;
     char command[400];
-    sprintf(command, "balance %s\n", user);
+    int id = rand(); 
+    sprintf(command, "%d balance %s\n", id, user);
 
     // Sending balance command
     atm_send(atm, command, strlen(command));
@@ -265,7 +270,8 @@ void withdraw(ATM *atm, char *user, char *amt)
     char recvline[10000];
     int n;
     char command[400];
-    sprintf(command, "withdraw %s %s\n", user, amt);
+    int id = rand(); 
+    sprintf(command, "%d withdraw %s %s\n", id, user, amt);
 
     // Sending withdraw command
     atm_send(atm, command, strlen(command));

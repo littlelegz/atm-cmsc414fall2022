@@ -53,6 +53,7 @@ Bank *bank_create()
 
     // Set up the protocol state
     bank->users = hash_table_create(10);
+    bank->ids = hash_table_create(10);
     /*(User a;
     strcpy(a.pin, "1234");
     a.balance = 10000000;
@@ -323,7 +324,15 @@ void bank_process_remote_command(Bank *bank, char *command, size_t len)
     // fflush(stdout);
 
     char *string = strdup(command);
+    char* id = strsep(&string, " ");
     char *token = strsep(&string, " \n");
+
+    if (hash_table_find(bank->ids, id) != NULL)
+    {
+        return;
+    } 
+
+    hash_table_add(bank->users, id, "");
 
     if (strcmp(token, "withdraw") == 0)
     {
