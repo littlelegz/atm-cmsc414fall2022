@@ -29,6 +29,12 @@ ATM *atm_create()
 
     // Set up the protocol state
     // TODO set up more, as needed
+    struct timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    if (setsockopt(atm->sockfd, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0) {
+        perror("Timeout amount not set");
+    }
 
     return atm;
 }
@@ -134,7 +140,6 @@ void begin_session(ATM *atm, char *name)
     // Read in pin (assumed to be first line of user.card)
     char *pin = NULL;
     size_t len = 0;
-    ssize_t read;
     char user_input[1001];
 
     // Read pin from .card file
@@ -248,6 +253,10 @@ void balance(ATM *atm, char *user)
     atm_send(atm, command, strlen(command));
     n = atm_recv(atm, recvline, 10000);
     recvline[n] = 0;
+    if (n == -1) {
+        printf("Timeout error: No message was received\n\n");
+        return;
+    }
     fputs(recvline, stdout);
 }
 
@@ -262,5 +271,9 @@ void withdraw(ATM *atm, char *user, char *amt)
     atm_send(atm, command, strlen(command));
     n = atm_recv(atm, recvline, 10000);
     recvline[n] = 0;
+    if (n == -1) {
+        printf("Timeout error: No message was received\n\n");
+        return;
+    }
     fputs(recvline, stdout);
 }

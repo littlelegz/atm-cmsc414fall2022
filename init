@@ -19,8 +19,11 @@ if (touch "$BANK_FILE" && touch "$ATM_FILE");
 then
   echo "Successfully initialized bank state"
   SECRET=$(openssl rand -hex 256)
+  SECRET2=$(openssl rand -hex 256)
   echo $SECRET >> "$ATM_FILE"
   echo $SECRET >> "$BANK_FILE"
+  echo $SECRET2 >> "$ATM_FILE"
+  echo $SECRET2 >> "$BANK_FILE"
   exit 0
 else
   echo "Error creating initialization files"
