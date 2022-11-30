@@ -37,6 +37,7 @@ typedef struct _Bank
     unsigned char *iv;
     EVP_PKEY *pkey;
 } Bank;
+typedef unsigned char byte;
 
 Bank* bank_create();
 void bank_free(Bank *bank);
