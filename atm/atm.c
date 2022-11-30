@@ -77,61 +77,61 @@ int sign_it(const byte* msg, size_t mlen, byte** sig, size_t* slen, EVP_PKEY* pk
     {
         ctx = EVP_MD_CTX_create();
         if(ctx == NULL) {
-            printf("EVP_MD_CTX_create failed, error 0x%lx\n", ERR_get_error());
+            //printf("EVP_MD_CTX_create failed, error 0x%lx\n", ERR_get_error());
             break; /* failed */
         }
         
         const EVP_MD* md = EVP_get_digestbyname(hn);
         if(md == NULL) {
-            printf("EVP_get_digestbyname failed, error 0x%lx\n", ERR_get_error());
+            //printf("EVP_get_digestbyname failed, error 0x%lx\n", ERR_get_error());
             break; /* failed */
         }
         
         int rc = EVP_DigestInit_ex(ctx, md, NULL);
         if(rc != 1) {
-            printf("EVP_DigestInit_ex failed, error 0x%lx\n", ERR_get_error());
+            //printf("EVP_DigestInit_ex failed, error 0x%lx\n", ERR_get_error());
             break; /* failed */
         }
         
         rc = EVP_DigestSignInit(ctx, NULL, md, NULL, pkey);
         if(rc != 1) {
-            printf("EVP_DigestSignInit failed, error 0x%lx\n", ERR_get_error());
+            //printf("EVP_DigestSignInit failed, error 0x%lx\n", ERR_get_error());
             break; /* failed */
         }
         
         rc = EVP_DigestSignUpdate(ctx, msg, mlen);
         if(rc != 1) {
-            printf("EVP_DigestSignUpdate failed, error 0x%lx\n", ERR_get_error());
+            //printf("EVP_DigestSignUpdate failed, error 0x%lx\n", ERR_get_error());
             break; /* failed */
         }
         
         size_t req = 0;
         rc = EVP_DigestSignFinal(ctx, NULL, &req);
         if(rc != 1) {
-            printf("EVP_DigestSignFinal failed (1), error 0x%lx\n", ERR_get_error());
+            //printf("EVP_DigestSignFinal failed (1), error 0x%lx\n", ERR_get_error());
             break; /* failed */
         }
         
         if(!(req > 0)) {
-            printf("EVP_DigestSignFinal failed (2), error 0x%lx\n", ERR_get_error());
+            //printf("EVP_DigestSignFinal failed (2), error 0x%lx\n", ERR_get_error());
             break; /* failed */
         }
         
         *sig = OPENSSL_malloc(req);
         if(*sig == NULL) {
-            printf("OPENSSL_malloc failed, error 0x%lx\n", ERR_get_error());
+            //printf("OPENSSL_malloc failed, error 0x%lx\n", ERR_get_error());
             break; /* failed */
         }
         
         *slen = req;
         rc = EVP_DigestSignFinal(ctx, *sig, slen);
         if(rc != 1) {
-            printf("EVP_DigestSignFinal failed (3), return code %d, error 0x%lx\n", rc, ERR_get_error());
+            //printf("EVP_DigestSignFinal failed (3), return code %d, error 0x%lx\n", rc, ERR_get_error());
             break; /* failed */
         }
         
         if(rc != 1) {
-            printf("EVP_DigestSignFinal failed, mismatched signature sizes %ld, %ld", req, *slen);
+            //printf("EVP_DigestSignFinal failed, mismatched signature sizes %ld, %ld", req, *slen);
             break; /* failed */
         }
         
@@ -163,31 +163,31 @@ int verify_it(const byte* msg, size_t mlen, const byte* sig, size_t slen, EVP_PK
     {
         ctx = EVP_MD_CTX_create();
         if(ctx == NULL) {
-            printf("EVP_MD_CTX_create failed, error 0x%lx\n", ERR_get_error());
+            //printf("EVP_MD_CTX_create failed, error 0x%lx\n", ERR_get_error());
             break; /* failed */
         }
         
         const EVP_MD* md = EVP_get_digestbyname(hn);
         if(md == NULL) {
-            printf("EVP_get_digestbyname failed, error 0x%lx\n", ERR_get_error());
+            //printf("EVP_get_digestbyname failed, error 0x%lx\n", ERR_get_error());
             break; /* failed */
         }
         
         int rc = EVP_DigestInit_ex(ctx, md, NULL);
         if(rc != 1) {
-            printf("EVP_DigestInit_ex failed, error 0x%lx\n", ERR_get_error());
+            //printf("EVP_DigestInit_ex failed, error 0x%lx\n", ERR_get_error());
             break; /* failed */
         }
         
         rc = EVP_DigestSignInit(ctx, NULL, md, NULL, pkey);
         if(rc != 1) {
-            printf("EVP_DigestSignInit failed, error 0x%lx\n", ERR_get_error());
+            //printf("EVP_DigestSignInit failed, error 0x%lx\n", ERR_get_error());
             break; /* failed */
         }
         
         rc = EVP_DigestSignUpdate(ctx, msg, mlen);
         if(rc != 1) {
-            printf("EVP_DigestSignUpdate failed, error 0x%lx\n", ERR_get_error());
+            //printf("EVP_DigestSignUpdate failed, error 0x%lx\n", ERR_get_error());
             break; /* failed */
         }
         
@@ -196,7 +196,7 @@ int verify_it(const byte* msg, size_t mlen, const byte* sig, size_t slen, EVP_PK
         
         rc = EVP_DigestSignFinal(ctx, buff, &size);
         if(rc != 1) {
-            printf("EVP_DigestVerifyFinal failed, error 0x%lx\n", ERR_get_error());
+            //printf("EVP_DigestVerifyFinal failed, error 0x%lx\n", ERR_get_error());
             break; /* failed */
         }
         
@@ -510,25 +510,17 @@ void balance(ATM *atm, char *user)
     int id = rand(); 
     sprintf(command, "%d balance,%s\n", id, user);
 
+    //printf("Command is: %s\nSize of command: %ld\n\n", command, strlen(command));
+    
     /* Adding HMAC to msg.
     Generated signature will be stored in sig, a byte array. Length of 
     sig will be stored in slen */ 
-
-    //printf("Command is: %s\nSize of command: %ld\n\n", command, strlen(command));
-    fflush(stdout);
     byte* sig = NULL;
     size_t slen = 0;
-    int rc;
-    rc = sign_it(command, sizeof(command), &sig, &slen, atm->pkey);
-    /*
-    if(rc == 0) {
-        printf("Created signature size: %ld\n", slen);
-    } else {
-        printf("Failed to create signature, return code %d\n", rc);
-        exit(1); 
-    }
+    sign_it(command, strlen(command), &sig, &slen, atm->pkey);
+
+    //Output the signature as hex
     print_it("Signature", sig, slen);
-    */
     
     // Sample code for verification
     /*
@@ -542,10 +534,12 @@ void balance(ATM *atm, char *user)
 
     // Append signature to the end of command
     // NOTE: prepending fucks with parsing since sig is byte array
+    // Can test tampering here
     sprintf(command, "%s%s\n", command, sig);
-    //printf("Final msg length: %ld\n\n", strlen(command));
+    
     // Sending balance command
     atm_send(atm, command, strlen(command));
+    bzero(recvline, sizeof(recvline));
     n = atm_recv(atm, recvline, 10000);
     recvline[n] = 0;
     if (n == -1) {
@@ -569,8 +563,10 @@ void withdraw(ATM *atm, char *user, char *amt)
 
     byte* sig = NULL;
     size_t slen = 0;
-    int rc;
-    rc = sign_it(command, sizeof(command), &sig, &slen, atm->pkey);
+    sign_it(command, strlen(command), &sig, &slen, atm->pkey);
+
+    //Output signature
+    print_it("Signature", sig, slen);
 
     // Append signature to the end of command
     sprintf(command, "%s%s\n", command, sig);

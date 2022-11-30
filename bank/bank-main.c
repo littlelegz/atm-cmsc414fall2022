@@ -54,14 +54,14 @@ int main(int argc, char**argv)
 
        if(FD_ISSET(0, &fds))
        {
-           fgets(sendline, 10000,stdin);
+           fgets(sendline, 1000 ,stdin);
            bank_process_local_command(bank, sendline, strlen(sendline));
            printf("%s", prompt);
            fflush(stdout);
        }
        else if(FD_ISSET(bank->sockfd, &fds))
        {
-           n = bank_recv(bank, recvline, 10000);
+           n = bank_recv(bank, recvline, 1000);
            bank_process_remote_command(bank, recvline, n);
        }
    }
