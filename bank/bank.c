@@ -614,7 +614,7 @@ void bank_process_remote_command(Bank *bank, char *command, size_t len)
     // A balance command will need to be -39
     //
     // Signature will always be 32 long
-    /*int rc = verify_it(check, strlen(check), sig, 32, bank->key);
+    /*int rc = verify_it(check, strlen(check), sig, 32, bank->pkey);
     if(rc == 0) {
         printf("Verified signature\n");
     } else {
