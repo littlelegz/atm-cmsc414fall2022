@@ -602,6 +602,8 @@ void bank_process_remote_command(Bank *bank, char *command, size_t len)
     char* id = strsep(&string, " ");
     // Changed syntax of command to be comma separated will account for this below
     char *comm = strsep(&string, "\n");
+
+    /*
     byte* sig = strsep(&string, "\n");
 
     char check[400];
@@ -611,18 +613,16 @@ void bank_process_remote_command(Bank *bank, char *command, size_t len)
     printf("Check is: %s\nCommand size: %ld\n\n", check, strlen(check));
     // Checking received sig
     print_it("Signature", sig, 32);
-    // A balance command will need to be -39
-    //
     // Signature will always be 32 long
-    /*int rc = verify_it(check, strlen(check), sig, 32, bank->pkey);
+    int rc = verify_it(check, strlen(check), sig, 32, bank->pkey);
     if(rc == 0) {
         printf("Verified signature\n");
     } else {
         printf("Failed to verify signature, return code %d\n", rc);
-    }*/
+    }
 
-    printf("Received tokens id: %s, and command: %s\n\n", id, comm);
-    fflush(stdout);
+    //printf("Received tokens id: %s, and command: %s\n\n", id, comm);
+    fflush(stdout); */
 
     if (hash_table_find(bank->ids, id) != NULL)
     {
@@ -630,26 +630,16 @@ void bank_process_remote_command(Bank *bank, char *command, size_t len)
     } 
 
     hash_table_add(bank->users, id, "");
-
+    
     char* token = strsep(&comm, ",");
 
     if (strcmp(token, "withdraw") == 0)
     {
-        string = strdup(comm);
-        char* id = strsep(&string, ",");
-        char* amount = strsep(&string, "\n");
-        char withdraw[400];
-        sprintf(withdraw, "%s %s\n", id, amount);
-
-        bank_process_withdraw(bank, withdraw);
+        bank_process_withdraw(bank, comm);
     }
     else if (strcmp(token, "balance") == 0)
     {
-        string = strdup(comm);
-        char* id = strsep(&string, "\n");
-        char balance[400];
-        sprintf(balance, "%s\n", id);
-        char *ret = bank_process_balance(bank, balance);
+        char *ret = bank_process_balance(bank, comm);
         char response[400];
         sprintf(response, "%s\n\n", ret);
         bank_send(bank, response, strlen(response));

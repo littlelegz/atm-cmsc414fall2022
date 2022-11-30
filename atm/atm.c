@@ -514,19 +514,22 @@ void balance(ATM *atm, char *user)
     Generated signature will be stored in sig, a byte array. Length of 
     sig will be stored in slen */ 
 
-    printf("Command is: %s\nSize of command: %ld\n\n", command, strlen(command));
+    //printf("Command is: %s\nSize of command: %ld\n\n", command, strlen(command));
     fflush(stdout);
     byte* sig = NULL;
     size_t slen = 0;
     int rc;
     rc = sign_it(command, sizeof(command), &sig, &slen, atm->pkey);
+    /*
     if(rc == 0) {
         printf("Created signature size: %ld\n", slen);
     } else {
         printf("Failed to create signature, return code %d\n", rc);
-        exit(1); /* Should cleanup here */
+        exit(1); 
     }
     print_it("Signature", sig, slen);
+    */
+    
     // Sample code for verification
     /*
     rc = verify_it(command, sizeof(command), sig, slen, atm->pkey);
@@ -540,7 +543,7 @@ void balance(ATM *atm, char *user)
     // Append signature to the end of command
     // NOTE: prepending fucks with parsing since sig is byte array
     sprintf(command, "%s%s\n", command, sig);
-    printf("Final msg length: %ld\n\n", strlen(command));
+    //printf("Final msg length: %ld\n\n", strlen(command));
     // Sending balance command
     atm_send(atm, command, strlen(command));
     n = atm_recv(atm, recvline, 10000);
@@ -558,25 +561,16 @@ void withdraw(ATM *atm, char *user, char *amt)
     int n;
     char command[400];
     int id = rand(); 
-    sprintf(command, "%d withdraw,%s,%s\n", id, user, amt);
+    sprintf(command, "%d withdraw,%s %s\n", id, user, amt);
 
     /* Adding HMAC to msg.
     Generated signature will be stored in sig, a byte array. Length of 
     sig will be stored in slen */ 
 
-    printf("Command is: %s\nSize of command: %ld\n\n", command, strlen(command));
-    fflush(stdout);
     byte* sig = NULL;
     size_t slen = 0;
     int rc;
     rc = sign_it(command, sizeof(command), &sig, &slen, atm->pkey);
-    if(rc == 0) {
-        //printf("Created signature\n");
-    } else {
-        printf("Failed to create signature, return code %d\n", rc);
-        exit(1); /* Should cleanup here */
-    }
-    //print_it("Signature", sig, slen);
 
     // Append signature to the end of command
     sprintf(command, "%s%s\n", command, sig);
