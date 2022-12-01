@@ -597,6 +597,7 @@ void bank_process_remote_command(Bank *bank, char *command, size_t len)
     size_t slen = 0;
     // After tokenizing the input, I need to reconstruct the entire msg
     char check[400];
+    bzero(check, sizeof(check));
     sprintf(check, "%s %s\n", id, comm);
     // Printing received signature
     print_it("Signature1", sig, 32);
@@ -612,7 +613,7 @@ void bank_process_remote_command(Bank *bank, char *command, size_t len)
     if(rc == 0) {
         printf("\nVerified signature\n\n");
     } else {
-        printf("\nFailed to verify signature, return code %d\n\n", rc);
+        printf("\nFailed to verify signature, message recevied was: %s\n\n", check);
         char* response = "Tampering detected, please try again\n\n";
         bank_send(bank, response, strlen(response));
         return;

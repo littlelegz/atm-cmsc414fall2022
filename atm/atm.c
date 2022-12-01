@@ -507,10 +507,11 @@ void balance(ATM *atm, char *user)
     char recvline[10000];
     int n;
     char command[400];
+    bzero(command, sizeof(command));
     int id = rand(); 
     sprintf(command, "%d balance,%s\n", id, user);
 
-    //printf("Command is: %s\nSize of command: %ld\n\n", command, strlen(command));
+    printf("Command is: %s\nSize of command: %ld\n\n", command, strlen(command));
     
     /* Adding HMAC to msg.
     Generated signature will be stored in sig, a byte array. Length of 
@@ -538,7 +539,7 @@ void balance(ATM *atm, char *user)
     sprintf(command, "%s%s\n", command, sig);
     
     // Sending balance command
-    atm_send(atm, command, strlen(command));
+    atm_send(atm, command, sizeof(command));
     bzero(recvline, sizeof(recvline));
     n = atm_recv(atm, recvline, 10000);
     recvline[n] = 0;
@@ -554,6 +555,7 @@ void withdraw(ATM *atm, char *user, char *amt)
     char recvline[10000];
     int n;
     char command[400];
+    bzero(command, sizeof(command));
     int id = rand(); 
     sprintf(command, "%d withdraw,%s %s\n", id, user, amt);
 
